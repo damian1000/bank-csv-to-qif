@@ -3,46 +3,59 @@ package io.github.damian1000.csv2qif
 import io.github.damian1000.csv2qif.readers.CryptoDotComReader
 import io.github.damian1000.csv2qif.readers.KiwibankReader
 import io.github.damian1000.csv2qif.readers.SantanderReader
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
+    exitProcess(run(args, System.out, System.err))
+}
+
+/**
+ * Pure-function entry point: returns the exit code rather than calling
+ * `exitProcess`, so it can be exercised from tests without killing the JVM.
+ * Exit codes follow the BSD `sysexits.h` convention: 64 = usage error,
+ * 66 = input file missing/unreadable, 1 = ran successfully but produced no
+ * transactions, 0 = success.
+ */
+fun run(args: Array<String>, out: PrintStream, err: PrintStream): Int {
     if (args.size != 3) {
-        printUsage()
-        exitProcess(64)
+        printUsage(err)
+        return 64
     }
     val (bankName, inputPath, outputPath) = args
     val bank = Bank.byName(bankName)
     if (bank == null) {
-        System.err.println("Unknown bank: '$bankName'.")
-        printUsage()
-        exitProcess(64)
+        err.println("Unknown bank: '$bankName'.")
+        printUsage(err)
+        return 64
     }
 
     val input = Paths.get(inputPath)
     if (!Files.isReadable(input)) {
-        System.err.println("Cannot read input file: $inputPath")
-        exitProcess(66)
+        err.println("Cannot read input file: $inputPath")
+        return 66
     }
 
     val transactions = Files.newBufferedReader(input).use { bank.reader().parse(it) }
     if (transactions.isEmpty()) {
-        System.err.println("No transactions parsed from $inputPath; nothing written.")
-        exitProcess(1)
+        err.println("No transactions parsed from $inputPath; nothing written.")
+        return 1
     }
 
     val output = Paths.get(outputPath)
     Files.newBufferedWriter(output).use { QifWriter(bank.qifType).write(transactions, it) }
-    println("Wrote ${transactions.size} transactions to $outputPath")
+    out.println("Wrote ${transactions.size} transactions to $outputPath")
+    return 0
 }
 
-private fun printUsage() {
-    System.err.println("Usage: bank-csv-to-qif <bank> <input.csv> <output.qif>")
-    System.err.println("Banks: ${Bank.entries.joinToString(", ") { it.cliName }}")
+private fun printUsage(err: PrintStream) {
+    err.println("Usage: bank-csv-to-qif <bank> <input.csv> <output.qif>")
+    err.println("Banks: ${Bank.entries.joinToString(", ") { it.cliName }}")
 }
 
-private enum class Bank(val cliName: String, val qifType: QifType) {
+internal enum class Bank(val cliName: String, val qifType: QifType) {
     KIWIBANK("kiwibank", QifType.BANK),
     SANTANDER("santander", QifType.CREDIT_CARD),
     CRYPTO_DOT_COM("cryptodotcom", QifType.CREDIT_CARD);
