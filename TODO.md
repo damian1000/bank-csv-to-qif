@@ -1,10 +1,5 @@
 # TODO
 
-## Next (Highest Leverage)
-
-- **Tests for `Main.kt`.** The CLI currently has no tests, which is the biggest gap in the Codecov report. Cover: bad bank name → exit 64, unreadable input → exit 66, valid run writes the right QIF and reports the right count. Use a temp directory for input/output paths.
-- **More tests around malformed input.** Each reader currently has a happy-path test; add cases for truncated rows (`row.size() < expected`), unparseable amounts, and dates in the wrong format. These are the "real CSV in the wild" failure modes.
-
 ## Bug Fixes / Hardening
 
 - The `KiwibankReader` uses column 3 for both `payee` and `memo` because the original Java did, but Kiwibank's actual export has different columns for `Other Party` and `Particulars`. Re-check a real recent export and consider promoting one of them to memo.

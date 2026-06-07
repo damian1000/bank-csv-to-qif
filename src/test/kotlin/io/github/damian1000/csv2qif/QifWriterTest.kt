@@ -50,4 +50,11 @@ class QifWriterTest {
         QifWriter(QifType.BANK).write(emptyList(), writer)
         assertEquals("!Type:Bank\n", writer.toString())
     }
+
+    @Test
+    fun `default constructor uses CCard type`() {
+        val writer = StringWriter()
+        QifWriter().write(emptyList(), writer)
+        assertEquals("!Type:CCard\n", writer.toString())
+    }
 }

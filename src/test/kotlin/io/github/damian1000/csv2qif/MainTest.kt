@@ -78,6 +78,36 @@ class MainTest {
     }
 
     @Test
+    fun `santander happy path produces CCard header`(@TempDir tmp: Path) {
+        val csv = """
+            Statement,Date,Card,Account,Memo,Description,Reference,Money In,Other,Money Out
+            1,02/01/2024,1234****5678,Visa,Card,PURCHASE DOMESTIC TESCO,REF001,"","","£42.95"
+        """.trimIndent() + "\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif")
+        val r = invoke("santander", input.toString(), output.toString())
+        assertEquals(0, r.code)
+        val written = Files.readString(output)
+        assertTrue(written.startsWith("!Type:CCard\n"))
+        assertTrue(written.contains("T-42.95"))
+    }
+
+    @Test
+    fun `cryptodotcom happy path produces CCard header`(@TempDir tmp: Path) {
+        val csv = """
+            Timestamp (UTC),Transaction Description,Currency,Amount,To Currency,To Amount,Native Currency,Native Amount,Native Amount (in USD),Transaction Kind
+            2024-01-02 10:15:33,Crypto Earn Deposit,USDC,-100.00,,,GBP,-78.50,,crypto_earn_deposit
+        """.trimIndent() + "\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif")
+        val r = invoke("cryptodotcom", input.toString(), output.toString())
+        assertEquals(0, r.code)
+        val written = Files.readString(output)
+        assertTrue(written.startsWith("!Type:CCard\n"))
+        assertTrue(written.contains("T-78.50"))
+    }
+
+    @Test
     fun `bank name lookup is case-insensitive`(@TempDir tmp: Path) {
         val input = tmp.resolve("in.csv").also {
             it.writeText("0,1,02/01/2024,Grocery Store,,45.20\n")
