@@ -1,6 +1,7 @@
 # Bank CSV → QIF Converter
 
 [![CI](https://github.com/damian1000/bank-csv-to-qif/actions/workflows/ci.yml/badge.svg)](https://github.com/damian1000/bank-csv-to-qif/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/damian1000/bank-csv-to-qif/graph/badge.svg)](https://codecov.io/gh/damian1000/bank-csv-to-qif)
 [![Kotlin](https://img.shields.io/badge/kotlin-2.3.21-blueviolet)](https://kotlinlang.org/)
 [![JDK](https://img.shields.io/badge/jdk-25-orange)](https://openjdk.org/projects/jdk/25/)
 
