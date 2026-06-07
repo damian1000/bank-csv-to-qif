@@ -1,0 +1,6 @@
+Account number,Account name,Date,Description,Money In,Money Out,Balance
+ACC123,Cheque,,Opening Balance Brought Forward,,,1000.00
+ACC123,Cheque,02/01/2024,Grocery Store,,45.20,954.80
+ACC123,Cheque,03/01/2024,Salary Deposit,3500.00,,4454.80
+ACC123,Cheque,04/01/2024,Coffee Shop,,4.50,4450.30
+ACC123,Cheque,05/01/2024,Refund Whitcoulls,12.50,,4462.80

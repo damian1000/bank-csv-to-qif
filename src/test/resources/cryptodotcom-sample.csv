@@ -1,0 +1,5 @@
+Timestamp (UTC),Transaction Description,Currency,Amount,To Currency,To Amount,Native Currency,Native Amount,Native Amount (in USD),Transaction Kind
+2024-01-02 10:15:33,Crypto Earn Deposit,USDC,-100.00,,,GBP,-78.50,,crypto_earn_deposit
+2024-01-03 14:22:08,Crypto Earn Interest,USDC,0.05,,,GBP,0.04,,crypto_earn_interest
+2024-01-10 09:00:42,Card Cashback,CRO,0.25,,,GBP,0.03,,referral_card_cashback
+2024-01-15 18:45:12,Crypto Earn Withdrawal,USDC,100.00,,,GBP,78.50,,crypto_earn_withdrawal
