@@ -1,5 +1,30 @@
 # TODO
 
+## Roadmap (prioritized)
+
+External review framing: "useful real product, publish a release". This repo is small but actually serves a real user need — that's its strength. Don't try to turn it into something it isn't.
+
+### P1 — publish a release
+
+The single highest-leverage move here:
+
+- Cut a GitHub release with a tagged version (e.g. `v1.0.0`).
+- Trigger `./gradlew installDist` in a GitHub Actions workflow on tag push; attach the resulting tarball as a release artifact.
+- README installation section: "download the latest release, unzip, run `bin/bank-csv-to-qif kiwibank input.csv output.qif`".
+
+Goes from "demo on GitHub" to "real product users can grab" without changing a line of source.
+
+### P2 — one bank or one polish item
+
+Pick one — adding a new bank is more useful than half-fixing an old one:
+
+- Add **HSBC UK** or **Monzo / Starling** support (most common UK formats not yet covered).
+- Or: add OFX writer alongside QIF, which broadens usefulness without adding a bank.
+
+### P3 — stretch (only if there's user demand)
+
+The "banks to add" / "other format outputs" lists below are all reasonable but speculative. Don't build them unless someone asks.
+
 ## Bug Fixes / Hardening
 
 - The `KiwibankReader` uses column 3 for both `payee` and `memo` because the original Java did, but Kiwibank's actual export has different columns for `Other Party` and `Particulars`. Re-check a real recent export and consider promoting one of them to memo.
