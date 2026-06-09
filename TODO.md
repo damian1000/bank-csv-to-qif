@@ -4,15 +4,13 @@
 
 External review framing: "useful real product, publish a release". This repo is small but actually serves a real user need — that's its strength. Don't try to turn it into something it isn't.
 
-### P1 — publish a release
+### P1 — done
 
-The single highest-leverage move here:
-
-- Cut a GitHub release with a tagged version (e.g. `v1.0.0`).
-- Trigger `./gradlew installDist` in a GitHub Actions workflow on tag push; attach the resulting tarball as a release artifact.
-- README installation section: "download the latest release, unzip, run `bin/bank-csv-to-qif kiwibank input.csv output.qif`".
-
-Goes from "demo on GitHub" to "real product users can grab" without changing a line of source.
+- `release.yml` workflow runs on `v*.*.*` tag push: tests, `installDist`,
+  `distTar`, `distZip`, then publishes a GitHub Release with both archives
+  and a `SHA256SUMS.txt`.
+- `v1.0.0` cut and pushed; the README "Download a release" section points
+  users at the tarball as the primary install path.
 
 ### P2 — one bank or one polish item
 
@@ -47,7 +45,6 @@ The "banks to add" / "other format outputs" lists below are all reasonable but s
 
 ## Distribution / Release
 
-- Publish a release binary via `./gradlew installDist` packaged as a tarball, triggered by a release tag in GitHub Actions. Lets non-Gradle users grab a `bin/bank-csv-to-qif` directly.
 - Consider publishing the library jar to Maven Central (the `io.github.damian1000` group ID was chosen precisely so this is straightforward when the time comes).
 - Optional: a Homebrew tap or Scoop manifest for one-line install.
 
