@@ -137,6 +137,89 @@ class MainTest {
         assertEquals(0, invoke("KIWIBANK", input.toString(), output.toString()).code)
     }
 
+    @Test
+    fun `--from filters out transactions before the cutoff`(
+        @TempDir tmp: Path,
+    ) {
+        val csv =
+            """
+            ACC,Cheque,01/01/2024,Old,,10.00,
+            ACC,Cheque,05/01/2024,Keep,,20.00,
+            """.trimIndent() + "\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif")
+        val r = invoke("--from", "2024-01-03", "kiwibank", input.toString(), output.toString())
+        assertEquals(0, r.code)
+        val written = Files.readString(output)
+        assertTrue(written.contains("PKeep"), "Jan 5 row must be included")
+        assertTrue(written.contains("T-20.00"))
+        assertTrue(!written.contains("T-10.00"), "Jan 1 row must be excluded")
+    }
+
+    @Test
+    fun `--to filters out transactions after the cutoff`(
+        @TempDir tmp: Path,
+    ) {
+        val csv =
+            """
+            ACC,Cheque,05/01/2024,Keep,,20.00,
+            ACC,Cheque,10/01/2024,Drop,,30.00,
+            """.trimIndent() + "\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif")
+        val r = invoke("--to", "2024-01-07", "kiwibank", input.toString(), output.toString())
+        assertEquals(0, r.code)
+        val written = Files.readString(output)
+        assertTrue(written.contains("T-20.00"))
+        assertTrue(!written.contains("T-30.00"))
+    }
+
+    @Test
+    fun `-v prints each parsed transaction to stderr`(
+        @TempDir tmp: Path,
+    ) {
+        val input = tmp.resolve("in.csv").also { it.writeText("ACC,Cheque,02/01/2024,Grocery Store,,45.20\n") }
+        val output = tmp.resolve("out.qif")
+        val r = invoke("-v", "kiwibank", input.toString(), output.toString())
+        assertEquals(0, r.code)
+        assertTrue(r.stderr.contains("parsed:"))
+        assertTrue(r.stderr.contains("Grocery Store"))
+    }
+
+    @Test
+    fun `--from with invalid date returns 64`(
+        @TempDir tmp: Path,
+    ) {
+        val input = tmp.resolve("in.csv").also { it.writeText("dummy\n") }
+        val output = tmp.resolve("out.qif")
+        assertEquals(64, invoke("--from", "not-a-date", "kiwibank", input.toString(), output.toString()).code)
+    }
+
+    @Test
+    fun `--from without a value returns 64`(
+        @TempDir tmp: Path,
+    ) {
+        val input = tmp.resolve("in.csv").also { it.writeText("dummy\n") }
+        val output = tmp.resolve("out.qif")
+        assertEquals(64, invoke("kiwibank", input.toString(), output.toString(), "--from").code)
+    }
+
+    @Test
+    fun `verbose reports filtered-out count when --from skips rows`(
+        @TempDir tmp: Path,
+    ) {
+        val csv =
+            """
+            ACC,Cheque,01/01/2024,Old,,10.00,
+            ACC,Cheque,05/01/2024,Keep,,20.00,
+            """.trimIndent() + "\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif")
+        val r = invoke("-v", "--from", "2024-01-03", "kiwibank", input.toString(), output.toString())
+        assertEquals(0, r.code)
+        assertTrue(r.stderr.contains("1 transaction(s) outside"))
+    }
+
     private fun invoke(vararg args: String): CliResult {
         val stdoutBuf = ByteArrayOutputStream()
         val stderrBuf = ByteArrayOutputStream()
