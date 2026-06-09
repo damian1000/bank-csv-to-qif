@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    ignore:
+      # Pinned to 2.3.x until CodeQL's Kotlin extractor supports 2.4+
+      # (see https://github.com/github/codeql/issues/... — currently caps at <2.3.30)
+      - dependency-name: "org.jetbrains.kotlin.jvm"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
