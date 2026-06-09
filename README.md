@@ -19,6 +19,19 @@ Built because every bank exports a *slightly* different CSV layout — different
 
 ## Use it from the CLI
 
+### Download a release (no build required)
+
+Grab the latest tarball or zip from [GitHub Releases](https://github.com/damian1000/bank-csv-to-qif/releases), extract it, and run:
+
+```bash
+tar -xf bank-csv-to-qif-1.0.0.tar
+./bank-csv-to-qif-1.0.0/bin/bank-csv-to-qif kiwibank statement.csv statement.qif
+```
+
+Each release ships a `SHA256SUMS.txt` next to the archives. Requires JDK 25 on `PATH`.
+
+### Build it locally
+
 ```bash
 ./gradlew installDist
 ./build/install/bank-csv-to-qif/bin/bank-csv-to-qif kiwibank statement.csv statement.qif
