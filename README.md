@@ -1,9 +1,9 @@
 # Bank CSV → QIF Converter
 
 [![CI](https://github.com/damian1000/bank-csv-to-qif/actions/workflows/ci.yml/badge.svg)](https://github.com/damian1000/bank-csv-to-qif/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/damian1000/bank-csv-to-qif/actions/workflows/codeql.yml/badge.svg)](https://github.com/damian1000/bank-csv-to-qif/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/damian1000/bank-csv-to-qif/graph/badge.svg)](https://codecov.io/gh/damian1000/bank-csv-to-qif)
-[![Kotlin](https://img.shields.io/badge/kotlin-2.3.21-blueviolet)](https://kotlinlang.org/)
-[![JDK](https://img.shields.io/badge/jdk-25-orange)](https://openjdk.org/projects/jdk/25/)
+[![Release](https://img.shields.io/github/v/release/damian1000/bank-csv-to-qif)](https://github.com/damian1000/bank-csv-to-qif/releases)
 
 Converts bank CSV statement exports into [QIF (Quicken Interchange Format)](https://en.wikipedia.org/wiki/Quicken_Interchange_Format), the format used by Quicken, MoneyDance, GnuCash, KMyMoney, Microsoft Money, and a long tail of legacy personal-finance tools that long predate Open Banking.
 

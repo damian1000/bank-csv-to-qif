@@ -9,7 +9,6 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 class SantanderReaderTest {
-
     @Test
     fun `parses sample CSV, strips boilerplate prefixes, drops INITIAL BALANCE`() {
         val transactions = readFixture("santander-sample.csv")

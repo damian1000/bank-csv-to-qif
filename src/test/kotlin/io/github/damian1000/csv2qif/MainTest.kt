@@ -11,8 +11,11 @@ import java.nio.file.Path
 import kotlin.io.path.writeText
 
 class MainTest {
-
-    private data class CliResult(val code: Int, val stdout: String, val stderr: String)
+    private data class CliResult(
+        val code: Int,
+        val stdout: String,
+        val stderr: String,
+    )
 
     @Test
     fun `no args prints usage and returns 64`() {
@@ -30,7 +33,9 @@ class MainTest {
     }
 
     @Test
-    fun `unknown bank reports and returns 64`(@TempDir tmp: Path) {
+    fun `unknown bank reports and returns 64`(
+        @TempDir tmp: Path,
+    ) {
         val input = tmp.resolve("input.csv").also { it.writeText("dummy") }
         val output = tmp.resolve("out.qif")
         val r = invoke("hsbc", input.toString(), output.toString())
@@ -39,7 +44,9 @@ class MainTest {
     }
 
     @Test
-    fun `unreadable input returns 66`(@TempDir tmp: Path) {
+    fun `unreadable input returns 66`(
+        @TempDir tmp: Path,
+    ) {
         val output = tmp.resolve("out.qif")
         val r = invoke("kiwibank", tmp.resolve("does-not-exist.csv").toString(), output.toString())
         assertEquals(66, r.code)
@@ -47,7 +54,9 @@ class MainTest {
     }
 
     @Test
-    fun `csv with no transactions returns 1 and writes nothing`(@TempDir tmp: Path) {
+    fun `csv with no transactions returns 1 and writes nothing`(
+        @TempDir tmp: Path,
+    ) {
         val input = tmp.resolve("empty.csv").also { it.writeText("just,a,header,row,no,money,in\n") }
         val output = tmp.resolve("out.qif")
         val r = invoke("kiwibank", input.toString(), output.toString())
@@ -57,12 +66,15 @@ class MainTest {
     }
 
     @Test
-    fun `happy path writes correct QIF and reports count`(@TempDir tmp: Path) {
-        val csv = """
+    fun `happy path writes correct QIF and reports count`(
+        @TempDir tmp: Path,
+    ) {
+        val csv =
+            """
             Account number,Account name,Date,Description,Money In,Money Out,Balance
             ACC,Cheque,02/01/2024,Grocery Store,,45.20,954.80
             ACC,Cheque,05/01/2024,Refund,12.50,,967.30
-        """.trimIndent() + "\n"
+            """.trimIndent() + "\n"
         val input = tmp.resolve("in.csv").also { it.writeText(csv) }
         val output = tmp.resolve("out.qif")
         val r = invoke("kiwibank", input.toString(), output.toString())
@@ -78,11 +90,14 @@ class MainTest {
     }
 
     @Test
-    fun `santander happy path produces CCard header`(@TempDir tmp: Path) {
-        val csv = """
+    fun `santander happy path produces CCard header`(
+        @TempDir tmp: Path,
+    ) {
+        val csv =
+            """
             Statement,Date,Card,Account,Memo,Description,Reference,Money In,Other,Money Out
             1,02/01/2024,1234****5678,Visa,Card,PURCHASE DOMESTIC TESCO,REF001,"","","£42.95"
-        """.trimIndent() + "\n"
+            """.trimIndent() + "\n"
         val input = tmp.resolve("in.csv").also { it.writeText(csv) }
         val output = tmp.resolve("out.qif")
         val r = invoke("santander", input.toString(), output.toString())
@@ -93,11 +108,14 @@ class MainTest {
     }
 
     @Test
-    fun `cryptodotcom happy path produces CCard header`(@TempDir tmp: Path) {
-        val csv = """
+    fun `cryptodotcom happy path produces CCard header`(
+        @TempDir tmp: Path,
+    ) {
+        val csv =
+            """
             Timestamp (UTC),Transaction Description,Currency,Amount,To Currency,To Amount,Native Currency,Native Amount,Native Amount (in USD),Transaction Kind
             2024-01-02 10:15:33,Crypto Earn Deposit,USDC,-100.00,,,GBP,-78.50,,crypto_earn_deposit
-        """.trimIndent() + "\n"
+            """.trimIndent() + "\n"
         val input = tmp.resolve("in.csv").also { it.writeText(csv) }
         val output = tmp.resolve("out.qif")
         val r = invoke("cryptodotcom", input.toString(), output.toString())
@@ -108,10 +126,13 @@ class MainTest {
     }
 
     @Test
-    fun `bank name lookup is case-insensitive`(@TempDir tmp: Path) {
-        val input = tmp.resolve("in.csv").also {
-            it.writeText("0,1,02/01/2024,Grocery Store,,45.20\n")
-        }
+    fun `bank name lookup is case-insensitive`(
+        @TempDir tmp: Path,
+    ) {
+        val input =
+            tmp.resolve("in.csv").also {
+                it.writeText("0,1,02/01/2024,Grocery Store,,45.20\n")
+            }
         val output = tmp.resolve("out.qif")
         assertEquals(0, invoke("KIWIBANK", input.toString(), output.toString()).code)
     }

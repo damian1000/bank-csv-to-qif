@@ -8,7 +8,9 @@ import java.time.format.DateTimeFormatter
  * matching the kind of account whose transactions you're exporting: Quicken
  * and similar tools route transactions differently depending on this header.
  */
-enum class QifType(val header: String) {
+enum class QifType(
+    val header: String,
+) {
     BANK("!Type:Bank"),
     CASH("!Type:Cash"),
     CREDIT_CARD("!Type:CCard"),
@@ -28,11 +30,15 @@ enum class QifType(val header: String) {
  * Output ends each line with `\n`; no `\r\n` regardless of platform, matching
  * the original QIF spec.
  */
-class QifWriter(private val type: QifType = QifType.CREDIT_CARD) {
-
+class QifWriter(
+    private val type: QifType = QifType.CREDIT_CARD,
+) {
     private val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
-    fun write(transactions: List<Transaction>, output: Writer) {
+    fun write(
+        transactions: List<Transaction>,
+        output: Writer,
+    ) {
         output.write(type.header)
         output.write("\n")
         for (txn in transactions) {
@@ -46,6 +52,5 @@ class QifWriter(private val type: QifType = QifType.CREDIT_CARD) {
 
     // QIF has no defined escape mechanism: `^` is the record terminator and
     // a bare newline ends a field. Strip both rather than emit invalid output.
-    private fun sanitize(field: String): String =
-        field.replace("^", "").replace("\r", "").replace("\n", " ")
+    private fun sanitize(field: String): String = field.replace("^", "").replace("\r", "").replace("\n", " ")
 }

@@ -16,7 +16,11 @@ fun main(args: Array<String>) {
  * 66 = input file missing/unreadable, 1 = ran successfully but produced no
  * transactions, 0 = success.
  */
-fun run(args: Array<String>, out: PrintStream, err: PrintStream): Int {
+fun run(
+    args: Array<String>,
+    out: PrintStream,
+    err: PrintStream,
+): Int {
     if (args.size != 3) {
         printUsage(err)
         return 64

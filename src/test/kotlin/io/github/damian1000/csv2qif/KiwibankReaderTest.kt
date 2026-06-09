@@ -8,7 +8,6 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 class KiwibankReaderTest {
-
     @Test
     fun `parses sample CSV preserving sign convention and skipping balance rows`() {
         val transactions = readFixture("kiwibank-sample.csv")

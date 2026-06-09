@@ -11,7 +11,6 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 class CryptoDotComReaderTest {
-
     @Test
     fun `parses sample CSV using native GBP amount, takes ISO date prefix from timestamp`() {
         val transactions = readFixture("cryptodotcom-sample.csv")

@@ -23,14 +23,15 @@ import java.time.format.DateTimeFormatter
  * is the simplest robust way to skip them.
  */
 class KiwibankReader : BankCsvReader {
-
     private val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
     override fun parse(input: Reader): List<Transaction> {
-        val format = CSVFormat.DEFAULT.builder()
-            .setIgnoreEmptyLines(true)
-            .setTrim(true)
-            .get()
+        val format =
+            CSVFormat.DEFAULT
+                .builder()
+                .setIgnoreEmptyLines(true)
+                .setTrim(true)
+                .get()
         return format.parse(input).mapNotNull { row -> parseRow(row) }
     }
 
@@ -44,11 +45,12 @@ class KiwibankReader : BankCsvReader {
         return Transaction(date = date, payee = description, memo = description, amount = amount)
     }
 
-    private fun tryParseDate(raw: String): LocalDate? = try {
-        LocalDate.parse(raw, dateFormat)
-    } catch (_: Exception) {
-        null
-    }
+    private fun tryParseDate(raw: String): LocalDate? =
+        try {
+            LocalDate.parse(raw, dateFormat)
+        } catch (_: Exception) {
+            null
+        }
 
     private fun parseAmount(raw: String): BigDecimal? {
         val cleaned = raw.trim()
@@ -60,13 +62,15 @@ class KiwibankReader : BankCsvReader {
      * Returns null for info/balance rows (no amount in either column); these
      * are skipped rather than treated as zero transactions.
      */
-    private fun signedAmount(moneyIn: BigDecimal?, moneyOut: BigDecimal?): BigDecimal? {
-        return when {
+    private fun signedAmount(
+        moneyIn: BigDecimal?,
+        moneyOut: BigDecimal?,
+    ): BigDecimal? =
+        when {
             moneyOut != null -> moneyOut.negate()
             moneyIn != null -> moneyIn
             else -> null
         }
-    }
 
     companion object {
         private const val COL_DATE = 2

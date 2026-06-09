@@ -22,14 +22,15 @@ import java.time.format.DateTimeFormatter
  * column contains "Transaction Description"; it's skipped.
  */
 class CryptoDotComReader : BankCsvReader {
-
     private val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
     override fun parse(input: Reader): List<Transaction> {
-        val format = CSVFormat.DEFAULT.builder()
-            .setIgnoreEmptyLines(true)
-            .setTrim(true)
-            .get()
+        val format =
+            CSVFormat.DEFAULT
+                .builder()
+                .setIgnoreEmptyLines(true)
+                .setTrim(true)
+                .get()
         return format.parse(input).mapNotNull { row -> parseRow(row) }
     }
 
@@ -40,23 +41,26 @@ class CryptoDotComReader : BankCsvReader {
         val secondary = row.get(COL_DESCRIPTION_SECONDARY)
         val payee = if (secondary.isBlank()) description else "$description ($secondary)"
         val date = tryParseDate(row.get(COL_DATE).take(10)) ?: return null
-        val amount = parseAmount(row.get(COL_AMOUNT))
-            ?: throw IllegalArgumentException("Missing amount in row $payee")
+        val amount =
+            parseAmount(row.get(COL_AMOUNT))
+                ?: throw IllegalArgumentException("Missing amount in row $payee")
         return Transaction(date = date, payee = payee, memo = payee, amount = amount)
     }
 
-    private fun tryParseDate(raw: String): LocalDate? = try {
-        LocalDate.parse(raw, dateFormat)
-    } catch (_: Exception) {
-        null
-    }
+    private fun tryParseDate(raw: String): LocalDate? =
+        try {
+            LocalDate.parse(raw, dateFormat)
+        } catch (_: Exception) {
+            null
+        }
 
     private fun parseAmount(raw: String): BigDecimal? {
-        val cleaned = raw
-            .replace("\"", "")
-            .replace("£", "")
-            .replace(",", "")
-            .trim()
+        val cleaned =
+            raw
+                .replace("\"", "")
+                .replace("£", "")
+                .replace(",", "")
+                .trim()
         if (cleaned.isEmpty()) return null
         return BigDecimal(cleaned)
     }

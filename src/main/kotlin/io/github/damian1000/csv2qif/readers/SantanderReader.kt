@@ -24,14 +24,15 @@ import java.time.format.DateTimeFormatter
  * actual merchant; those are stripped before emitting.
  */
 class SantanderReader : BankCsvReader {
-
     private val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
     override fun parse(input: Reader): List<Transaction> {
-        val format = CSVFormat.DEFAULT.builder()
-            .setIgnoreEmptyLines(true)
-            .setTrim(true)
-            .get()
+        val format =
+            CSVFormat.DEFAULT
+                .builder()
+                .setIgnoreEmptyLines(true)
+                .setTrim(true)
+                .get()
         return format.parse(input).mapNotNull { row -> parseRow(row) }
     }
 
@@ -48,11 +49,12 @@ class SantanderReader : BankCsvReader {
         return Transaction(date = date, payee = payee, memo = memo, amount = amount)
     }
 
-    private fun tryParseDate(raw: String): LocalDate? = try {
-        LocalDate.parse(raw, dateFormat)
-    } catch (_: Exception) {
-        null
-    }
+    private fun tryParseDate(raw: String): LocalDate? =
+        try {
+            LocalDate.parse(raw, dateFormat)
+        } catch (_: Exception) {
+            null
+        }
 
     private fun cleanPayee(raw: String): String {
         var cleaned = raw
@@ -63,22 +65,25 @@ class SantanderReader : BankCsvReader {
     }
 
     private fun parseAmount(raw: String): BigDecimal? {
-        val cleaned = raw
-            .replace("\"", "")
-            .replace("£", "")
-            .replace(",", "")
-            .trim()
+        val cleaned =
+            raw
+                .replace("\"", "")
+                .replace("£", "")
+                .replace(",", "")
+                .trim()
         if (cleaned.isEmpty()) return null
         return BigDecimal(cleaned)
     }
 
-    private fun signedAmount(moneyIn: BigDecimal?, moneyOut: BigDecimal?): BigDecimal? {
-        return when {
+    private fun signedAmount(
+        moneyIn: BigDecimal?,
+        moneyOut: BigDecimal?,
+    ): BigDecimal? =
+        when {
             moneyOut != null -> moneyOut.negate()
             moneyIn != null -> moneyIn
             else -> null
         }
-    }
 
     companion object {
         private const val COL_DATE = 1
@@ -92,13 +97,14 @@ class SantanderReader : BankCsvReader {
          * to leave the actual payee. Order matters: longer/more specific prefixes
          * come first to avoid being shadowed by their shorter cousins.
          */
-        private val PAYEE_PREFIXES_TO_STRIP = listOf(
-            "PURCHASE - INTERNATIONAL ",
-            "PURCHASE - DOMESTIC ",
-            "PURCHASE DOMESTIC ",
-            "RECURRENT TRANSACTION ",
-            "CARD PAYMENT TO ",
-            "APPLE PAY ",
-        )
+        private val PAYEE_PREFIXES_TO_STRIP =
+            listOf(
+                "PURCHASE - INTERNATIONAL ",
+                "PURCHASE - DOMESTIC ",
+                "PURCHASE DOMESTIC ",
+                "RECURRENT TRANSACTION ",
+                "CARD PAYMENT TO ",
+                "APPLE PAY ",
+            )
     }
 }
