@@ -57,4 +57,29 @@ class QifWriterTest {
         QifWriter().write(emptyList(), writer)
         assertEquals("!Type:CCard\n", writer.toString())
     }
+
+    @Test
+    fun `caret and newlines in payee and memo are stripped`() {
+        val transactions = listOf(
+            Transaction(
+                date = LocalDate.of(2024, 1, 2),
+                payee = "Some^Store",
+                memo = "line1\nline2\rline3",
+                amount = BigDecimal("-1.00"),
+            ),
+        )
+        val writer = StringWriter()
+        QifWriter(QifType.CREDIT_CARD).write(transactions, writer)
+
+        val expected = """
+            !Type:CCard
+            D02/01/2024
+            Mline1 line2line3
+            PSomeStore
+            T-1.00
+            ^
+
+        """.trimIndent()
+        assertEquals(expected, writer.toString())
+    }
 }

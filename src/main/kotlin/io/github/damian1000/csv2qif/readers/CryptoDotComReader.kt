@@ -38,7 +38,7 @@ class CryptoDotComReader : BankCsvReader {
         val description = row.get(COL_DESCRIPTION_PRIMARY)
         if (description.contains("Transaction Description")) return null
         val secondary = row.get(COL_DESCRIPTION_SECONDARY)
-        val payee = "${description}_$secondary"
+        val payee = if (secondary.isBlank()) description else "$description ($secondary)"
         val date = tryParseDate(row.get(COL_DATE).take(10)) ?: return null
         val amount = parseAmount(row.get(COL_AMOUNT))
             ?: throw IllegalArgumentException("Missing amount in row $payee")

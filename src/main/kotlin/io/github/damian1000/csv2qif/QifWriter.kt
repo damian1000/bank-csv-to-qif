@@ -37,10 +37,15 @@ class QifWriter(private val type: QifType = QifType.CREDIT_CARD) {
         output.write("\n")
         for (txn in transactions) {
             output.write("D${dateFormat.format(txn.date)}\n")
-            output.write("M${txn.memo}\n")
-            output.write("P${txn.payee}\n")
+            output.write("M${sanitize(txn.memo)}\n")
+            output.write("P${sanitize(txn.payee)}\n")
             output.write("T${txn.amount.toPlainString()}\n")
             output.write("^\n")
         }
     }
+
+    // QIF has no defined escape mechanism: `^` is the record terminator and
+    // a bare newline ends a field. Strip both rather than emit invalid output.
+    private fun sanitize(field: String): String =
+        field.replace("^", "").replace("\r", "").replace("\n", " ")
 }

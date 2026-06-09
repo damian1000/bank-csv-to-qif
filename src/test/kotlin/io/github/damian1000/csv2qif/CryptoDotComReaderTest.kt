@@ -20,8 +20,8 @@ class CryptoDotComReaderTest {
         assertEquals(
             Transaction(
                 date = LocalDate.of(2024, 1, 2),
-                payee = "Crypto Earn Deposit_USDC",
-                memo = "Crypto Earn Deposit_USDC",
+                payee = "Crypto Earn Deposit (USDC)",
+                memo = "Crypto Earn Deposit (USDC)",
                 amount = BigDecimal("-78.50"),
             ),
             transactions[0],
