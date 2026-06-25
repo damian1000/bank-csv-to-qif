@@ -13,7 +13,7 @@ Built because every bank exports a *slightly* different CSV layout — different
 
 | Bank | CLI name | Notes |
 |---|---|---|
-| Kiwibank (NZ) | `kiwibank` | Date `dd/MM/yyyy`, separate Money In / Money Out columns. Output as `!Type:Bank`. |
+| Kiwibank (NZ) | `kiwibank` | Date `dd/MM/yyyy`, distinct Other Party (→ payee) and Particulars (→ memo) columns, separate Money In / Money Out columns. Output as `!Type:Bank`. |
 | Santander (UK) | `santander` | Date `dd/MM/yyyy`, `£` amounts in quoted fields, strips `PURCHASE DOMESTIC ` / `APPLE PAY ` / `RECURRENT TRANSACTION ` / `CARD PAYMENT TO ` / `PURCHASE - INTERNATIONAL ` prefixes from the payee. Skips `INITIAL BALANCE` rows. Output as `!Type:CCard`. |
 | Crypto.com | `cryptodotcom` | ISO timestamp (`yyyy-MM-dd HH:mm:ss`), signed native-currency amount, payee is `description_currency`. Output as `!Type:CCard`. |
 
