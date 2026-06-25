@@ -71,9 +71,9 @@ class MainTest {
     ) {
         val csv =
             """
-            Account number,Account name,Date,Description,Money In,Money Out,Balance
-            ACC,Cheque,02/01/2024,Grocery Store,,45.20,954.80
-            ACC,Cheque,05/01/2024,Refund,12.50,,967.30
+            Account number,Account name,Date,Other Party,Particulars,Money In,Money Out,Balance
+            ACC,Cheque,02/01/2024,Grocery Store,Weekly shop,,45.20,954.80
+            ACC,Cheque,05/01/2024,Refund,Returned item,12.50,,967.30
             """.trimIndent() + "\n"
         val input = tmp.resolve("in.csv").also { it.writeText(csv) }
         val output = tmp.resolve("out.qif")
@@ -131,7 +131,7 @@ class MainTest {
     ) {
         val input =
             tmp.resolve("in.csv").also {
-                it.writeText("0,1,02/01/2024,Grocery Store,,45.20\n")
+                it.writeText("0,1,02/01/2024,Grocery Store,Weekly shop,,45.20\n")
             }
         val output = tmp.resolve("out.qif")
         assertEquals(0, invoke("KIWIBANK", input.toString(), output.toString()).code)
@@ -143,8 +143,8 @@ class MainTest {
     ) {
         val csv =
             """
-            ACC,Cheque,01/01/2024,Old,,10.00,
-            ACC,Cheque,05/01/2024,Keep,,20.00,
+            ACC,Cheque,01/01/2024,Old,ref-old,,10.00
+            ACC,Cheque,05/01/2024,Keep,ref-keep,,20.00
             """.trimIndent() + "\n"
         val input = tmp.resolve("in.csv").also { it.writeText(csv) }
         val output = tmp.resolve("out.qif")
@@ -162,8 +162,8 @@ class MainTest {
     ) {
         val csv =
             """
-            ACC,Cheque,05/01/2024,Keep,,20.00,
-            ACC,Cheque,10/01/2024,Drop,,30.00,
+            ACC,Cheque,05/01/2024,Keep,ref-keep,,20.00
+            ACC,Cheque,10/01/2024,Drop,ref-drop,,30.00
             """.trimIndent() + "\n"
         val input = tmp.resolve("in.csv").also { it.writeText(csv) }
         val output = tmp.resolve("out.qif")
@@ -178,7 +178,7 @@ class MainTest {
     fun `-v prints each parsed transaction to stderr`(
         @TempDir tmp: Path,
     ) {
-        val input = tmp.resolve("in.csv").also { it.writeText("ACC,Cheque,02/01/2024,Grocery Store,,45.20\n") }
+        val input = tmp.resolve("in.csv").also { it.writeText("ACC,Cheque,02/01/2024,Grocery Store,Weekly shop,,45.20\n") }
         val output = tmp.resolve("out.qif")
         val r = invoke("-v", "kiwibank", input.toString(), output.toString())
         assertEquals(0, r.code)
@@ -210,8 +210,8 @@ class MainTest {
     ) {
         val csv =
             """
-            ACC,Cheque,01/01/2024,Old,,10.00,
-            ACC,Cheque,05/01/2024,Keep,,20.00,
+            ACC,Cheque,01/01/2024,Old,ref-old,,10.00
+            ACC,Cheque,05/01/2024,Keep,ref-keep,,20.00
             """.trimIndent() + "\n"
         val input = tmp.resolve("in.csv").also { it.writeText(csv) }
         val output = tmp.resolve("out.qif")

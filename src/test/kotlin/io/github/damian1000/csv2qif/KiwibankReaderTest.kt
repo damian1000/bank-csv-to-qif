@@ -16,8 +16,8 @@ class KiwibankReaderTest {
         assertEquals(
             Transaction(
                 date = LocalDate.of(2024, 1, 2),
-                payee = "Grocery Store",
-                memo = "Grocery Store",
+                payee = "Countdown",
+                memo = "Weekly shop",
                 amount = BigDecimal("-45.20"),
             ),
             transactions[0],
@@ -25,8 +25,8 @@ class KiwibankReaderTest {
         assertEquals(
             Transaction(
                 date = LocalDate.of(2024, 1, 3),
-                payee = "Salary Deposit",
-                memo = "Salary Deposit",
+                payee = "Acme Payroll",
+                memo = "Salary",
                 amount = BigDecimal("3500.00"),
             ),
             transactions[1],

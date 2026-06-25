@@ -14,9 +14,13 @@ import java.time.format.DateTimeFormatter
  *
  * Column layout (zero-indexed):
  *  - 2: date (dd/MM/yyyy)
- *  - 3: memo / payee (Kiwibank combines these — the same field is used for both)
- *  - 4: amount in (blank if outflow)
- *  - 5: amount out (blank if inflow)
+ *  - 3: Other Party — the counterparty name, mapped to the QIF payee
+ *  - 4: Particulars — the transaction reference, mapped to the QIF memo
+ *  - 5: amount in (blank if outflow)
+ *  - 6: amount out (blank if inflow)
+ *
+ * Other Party and Particulars are distinct fields in a Kiwibank export, so they
+ * map to distinct QIF fields rather than duplicating one value into both.
  *
  * Lines that don't have a parseable date in column 2 are skipped silently:
  * Kiwibank exports include a few header rows before the transactions, and this
@@ -36,13 +40,14 @@ class KiwibankReader : BankCsvReader {
     }
 
     private fun parseRow(row: CSVRecord): Transaction? {
-        if (row.size() < 5) return null
+        if (row.size() <= COL_MONEY_IN) return null
         val date = tryParseDate(row.get(COL_DATE)) ?: return null
-        val description = row.get(COL_DESCRIPTION)
+        val payee = row.get(COL_OTHER_PARTY)
+        val memo = row.get(COL_PARTICULARS)
         val moneyIn = parseAmount(row.get(COL_MONEY_IN))
         val moneyOut = if (row.size() > COL_MONEY_OUT) parseAmount(row.get(COL_MONEY_OUT)) else null
         val amount = signedAmount(moneyIn, moneyOut) ?: return null
-        return Transaction(date = date, payee = description, memo = description, amount = amount)
+        return Transaction(date = date, payee = payee, memo = memo, amount = amount)
     }
 
     private fun tryParseDate(raw: String): LocalDate? =
@@ -74,8 +79,9 @@ class KiwibankReader : BankCsvReader {
 
     companion object {
         private const val COL_DATE = 2
-        private const val COL_DESCRIPTION = 3
-        private const val COL_MONEY_IN = 4
-        private const val COL_MONEY_OUT = 5
+        private const val COL_OTHER_PARTY = 3
+        private const val COL_PARTICULARS = 4
+        private const val COL_MONEY_IN = 5
+        private const val COL_MONEY_OUT = 6
     }
 }
