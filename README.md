@@ -7,7 +7,7 @@
 
 Converts bank CSV statement exports into [QIF (Quicken Interchange Format)](https://en.wikipedia.org/wiki/Quicken_Interchange_Format), the format used by Quicken, MoneyDance, GnuCash, KMyMoney, Microsoft Money, and a long tail of legacy personal-finance tools that long predate Open Banking.
 
-Built because every bank exports a _slightly_ different CSV layout — different column orders, different date formats, different ways of expressing money in versus money out — and every finance tool wants QIF. This bridges the gap with a clean per-bank parser, a canonical QIF writer, and a tiny CLI.
+Built because every bank exports a _slightly_ different CSV layout — different column orders, different date formats, different ways of expressing money in versus money out — and every finance tool wants QIF. This bridges the gap with a per-bank parser, a canonical QIF writer, and a tiny CLI.
 
 ## Supported banks
 
