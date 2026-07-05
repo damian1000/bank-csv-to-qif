@@ -71,6 +71,14 @@ spotless {
         target '*.gradle.kts'
         ktlint('1.5.0')
     }
+    // Config/docs (YAML workflows, Markdown) held to the same bar as the Kotlin. Needs Node on
+    // PATH for Prettier (present on CI runners and dev machines).
+    format 'config', {
+        target '.github/**/*.yml', '.github/**/*.yaml', '*.md'
+        prettier('3.4.2')
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }
 
 application {

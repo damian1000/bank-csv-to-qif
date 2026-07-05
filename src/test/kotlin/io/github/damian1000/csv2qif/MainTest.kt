@@ -54,6 +54,30 @@ class MainTest {
     }
 
     @Test
+    fun `unparseable amount returns 65 with a clean message`(
+        @TempDir tmp: Path,
+    ) {
+        val csv = "ACC,Cheque,02/01/2024,Grocery Store,Weekly shop,,not-a-number,954.80\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif")
+        val r = invoke("kiwibank", input.toString(), output.toString())
+        assertEquals(65, r.code)
+        assertTrue(r.stderr.contains("Failed to parse"), "expected a clean data error, got: ${r.stderr}")
+    }
+
+    @Test
+    fun `unwritable output returns 73 with a clean message`(
+        @TempDir tmp: Path,
+    ) {
+        val csv = "ACC,Cheque,02/01/2024,Grocery Store,Weekly shop,,45.20,954.80\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("missing-dir").resolve("out.qif") // parent doesn't exist
+        val r = invoke("kiwibank", input.toString(), output.toString())
+        assertEquals(73, r.code)
+        assertTrue(r.stderr.contains("Cannot write output"), "expected a clean write error, got: ${r.stderr}")
+    }
+
+    @Test
     fun `csv with no transactions returns 1 and writes nothing`(
         @TempDir tmp: Path,
     ) {

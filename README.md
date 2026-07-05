@@ -7,15 +7,15 @@
 
 Converts bank CSV statement exports into [QIF (Quicken Interchange Format)](https://en.wikipedia.org/wiki/Quicken_Interchange_Format), the format used by Quicken, MoneyDance, GnuCash, KMyMoney, Microsoft Money, and a long tail of legacy personal-finance tools that long predate Open Banking.
 
-Built because every bank exports a *slightly* different CSV layout — different column orders, different date formats, different ways of expressing money in versus money out — and every finance tool wants QIF. This bridges the gap with a clean per-bank parser, a canonical QIF writer, and a tiny CLI.
+Built because every bank exports a _slightly_ different CSV layout — different column orders, different date formats, different ways of expressing money in versus money out — and every finance tool wants QIF. This bridges the gap with a clean per-bank parser, a canonical QIF writer, and a tiny CLI.
 
 ## Supported banks
 
-| Bank | CLI name | Notes |
-|---|---|---|
-| Kiwibank (NZ) | `kiwibank` | Date `dd/MM/yyyy`, distinct Other Party (→ payee) and Particulars (→ memo) columns, separate Money In / Money Out columns. Output as `!Type:Bank`. |
-| Santander (UK) | `santander` | Date `dd/MM/yyyy`, `£` amounts in quoted fields, strips `PURCHASE DOMESTIC ` / `APPLE PAY ` / `RECURRENT TRANSACTION ` / `CARD PAYMENT TO ` / `PURCHASE - INTERNATIONAL ` prefixes from the payee. Skips `INITIAL BALANCE` rows. Output as `!Type:CCard`. |
-| Crypto.com | `cryptodotcom` | ISO timestamp (`yyyy-MM-dd HH:mm:ss`), signed native-currency amount, payee is `description_currency`. Output as `!Type:CCard`. |
+| Bank           | CLI name       | Notes                                                                                                                                                                                                                                                     |
+| -------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kiwibank (NZ)  | `kiwibank`     | Date `dd/MM/yyyy`, distinct Other Party (→ payee) and Particulars (→ memo) columns, separate Money In / Money Out columns. Output as `!Type:Bank`.                                                                                                        |
+| Santander (UK) | `santander`    | Date `dd/MM/yyyy`, `£` amounts in quoted fields, strips `PURCHASE DOMESTIC ` / `APPLE PAY ` / `RECURRENT TRANSACTION ` / `CARD PAYMENT TO ` / `PURCHASE - INTERNATIONAL ` prefixes from the payee. Skips `INITIAL BALANCE` rows. Output as `!Type:CCard`. |
+| Crypto.com     | `cryptodotcom` | ISO timestamp (`yyyy-MM-dd HH:mm:ss`), signed native-currency amount, payee is `description_currency`. Output as `!Type:CCard`.                                                                                                                           |
 
 ## Use it from the CLI
 
@@ -67,6 +67,7 @@ class MyBankReader : BankCsvReader {
 ```
 
 The pattern in the existing readers:
+
 - Use `CSVFormat.DEFAULT` from commons-csv for the parse (handles quoted fields with embedded commas correctly).
 - Try to parse a date from the date column; if it fails, skip the row — that's how all three readers reject the header.
 - Express the amount as a signed `BigDecimal` (positive for inflows, negative for outflows). The QIF writer doesn't add any sign fixups.
