@@ -1,5 +1,6 @@
 package io.github.damian1000.csv2qif
 
+import java.io.IOException
 import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -15,7 +16,8 @@ fun main(args: Array<String>) {
  * Pure-function entry point: returns the exit code rather than calling
  * `exitProcess`, so it can be exercised from tests without killing the JVM.
  * Exit codes follow the BSD `sysexits.h` convention: 64 = usage error,
- * 66 = input file missing/unreadable, 1 = ran successfully but produced no
+ * 65 = input data unparseable, 66 = input file missing/unreadable,
+ * 73 = output file unwritable, 1 = ran successfully but produced no
  * transactions, 0 = success.
  */
 fun run(
@@ -42,7 +44,15 @@ fun run(
         return 66
     }
 
-    val allTransactions = Files.newBufferedReader(input).use { bank.reader().parse(it) }
+    val allTransactions =
+        try {
+            Files.newBufferedReader(input).use { bank.reader().parse(it) }
+        } catch (e: Exception) {
+            // A row the reader can't interpret (e.g. a garbage amount) or an I/O failure mid-read:
+            // report it as a data error rather than dumping a stack trace.
+            err.println("Failed to parse ${parsed.inputPath}: ${e.message}")
+            return 65
+        }
     val transactions =
         allTransactions.filter { txn ->
             (parsed.from == null || !txn.date.isBefore(parsed.from)) &&
@@ -61,7 +71,12 @@ fun run(
     }
 
     val output = Paths.get(parsed.outputPath)
-    Files.newBufferedWriter(output).use { QifWriter(bank.qifType).write(transactions, it) }
+    try {
+        Files.newBufferedWriter(output).use { QifWriter(bank.qifType).write(transactions, it) }
+    } catch (e: IOException) {
+        err.println("Cannot write output file ${parsed.outputPath}: ${e.message}")
+        return 73
+    }
     out.println("Wrote ${transactions.size} transactions to ${parsed.outputPath}")
     return 0
 }
