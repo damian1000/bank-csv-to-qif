@@ -11,11 +11,11 @@ Built because every bank exports a _slightly_ different CSV layout — different
 
 ## Supported banks
 
-| Bank           | CLI name       | Notes                                                                                                                                                                                                                                                     |
-| -------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kiwibank (NZ)  | `kiwibank`     | Date `dd/MM/yyyy`, distinct Other Party (→ payee) and Particulars (→ memo) columns, separate Money In / Money Out columns. Output as `!Type:Bank`.                                                                                                        |
-| Santander (UK) | `santander`    | Date `dd/MM/yyyy`, `£` amounts in quoted fields, strips `PURCHASE DOMESTIC ` / `APPLE PAY ` / `RECURRENT TRANSACTION ` / `CARD PAYMENT TO ` / `PURCHASE - INTERNATIONAL ` prefixes from the payee. Skips `INITIAL BALANCE` rows. Output as `!Type:CCard`. |
-| Crypto.com     | `cryptodotcom` | ISO timestamp (`yyyy-MM-dd HH:mm:ss`), signed native-currency amount, payee is `description_currency`. Output as `!Type:CCard`.                                                                                                                           |
+| Bank           | CLI name       | Notes                                                                                                                                                                                                                                                                              |
+| -------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kiwibank (NZ)  | `kiwibank`     | Date `dd/MM/yyyy`, distinct Other Party (→ payee) and Particulars (→ memo) columns, separate Money In / Money Out columns. Output as `!Type:Bank`.                                                                                                                                 |
+| Santander (UK) | `santander`    | Date `dd/MM/yyyy`, `£` amounts in quoted fields, strips `PURCHASE - INTERNATIONAL ` / `PURCHASE - DOMESTIC ` / `PURCHASE DOMESTIC ` / `RECURRENT TRANSACTION ` / `CARD PAYMENT TO ` / `APPLE PAY ` prefixes from the payee. Skips `INITIAL BALANCE` rows. Output as `!Type:CCard`. |
+| Crypto.com     | `cryptodotcom` | ISO timestamp (`yyyy-MM-dd HH:mm:ss`), signed native-currency amount, payee is `description (secondary description)` when a secondary description is present, else just `description`. Output as `!Type:CCard`.                                                                    |
 
 ## Use it from the CLI
 
@@ -37,7 +37,15 @@ Each release ships a `SHA256SUMS.txt` next to the archives. Requires JDK 25 on `
 ./build/install/bank-csv-to-qif/bin/bank-csv-to-qif kiwibank statement.csv statement.qif
 ```
 
-Exit codes follow the BSD `sysexits.h` convention: `64` for bad usage, `66` for an unreadable input, `1` if no transactions were parseable (so the output file isn't created).
+Exit codes follow the BSD `sysexits.h` convention: `64` for bad usage, `65` for input data the reader can't parse, `66` for an unreadable input file, `73` for an unwritable output file, `1` if no transactions were parseable (so the output file isn't created), `0` on success.
+
+Two optional flags filter and narrate the run:
+
+```bash
+./bank-csv-to-qif-1.0.0/bin/bank-csv-to-qif kiwibank statement.csv statement.qif --from 2024-01-01 --to 2024-03-31 -v
+```
+
+`--from` / `--to` (ISO dates, either or both) keep only transactions in that range; `-v` / `--verbose` prints each parsed transaction to stderr, plus a count of any rows the date range excluded.
 
 ## Use it as a library
 
@@ -86,7 +94,7 @@ The pattern in the existing readers:
 - Java 25 toolchain
 - Apache Commons CSV 1.14.1 (the one runtime dependency)
 - JUnit Jupiter 6.1
-- Gradle 9.5.1
+- Gradle 9.6
 
 ## License
 
