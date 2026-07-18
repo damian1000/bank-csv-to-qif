@@ -1,5 +1,5 @@
 plugins {
-    id 'io.github.damian1000.kotlin-conventions' version '0.1.0'
+    id 'io.github.damian1000.kotlin-conventions' version '0.3.0'
     id 'application'
 }
 
