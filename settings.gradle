@@ -7,7 +7,7 @@ pluginManagement {
     resolutionStrategy {
         eachPlugin {
             if (requested.id.namespace == 'io.github.damian1000') {
-                useModule("com.github.damian1000:build-conventions:${requested.version}")
+                useModule("com.github.damian1000.build-conventions:plugins:${requested.version}")
             }
         }
     }
