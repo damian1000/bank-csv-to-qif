@@ -250,4 +250,64 @@ class MainTest {
         val code = run(args.toList().toTypedArray(), PrintStream(stdoutBuf), PrintStream(stderrBuf))
         return CliResult(code, stdoutBuf.toString(), stderrBuf.toString())
     }
+
+    @Test
+    fun `--from after --to returns 64 and names the range`(
+        @TempDir tmp: Path,
+    ) {
+        val input = tmp.resolve("in.csv").also { it.writeText("dummy\n") }
+        val output = tmp.resolve("out.qif")
+
+        // Previously this ran the whole conversion, matched nothing, and exited 1 with
+        // "No transactions parsed" — which sends the user to look at their statement for a
+        // mistake that is in their arguments.
+        val r = invoke("--from", "2024-06-01", "--to", "2024-01-01", "kiwibank", input.toString(), output.toString())
+
+        assertEquals(64, r.code)
+        assertTrue(r.stderr.contains("--from 2024-06-01 is after --to 2024-01-01"), r.stderr)
+        assertTrue(Files.notExists(output), "nothing is written for an impossible range")
+    }
+
+    @Test
+    fun `an equal --from and --to is a valid single-day range`(
+        @TempDir tmp: Path,
+    ) {
+        val csv =
+            """
+            Account number,Account name,Date,Other Party,Particulars,Money In,Money Out,Balance
+            ACC,Cheque,02/01/2024,Grocery Store,Weekly shop,,45.20,954.80
+            ACC,Cheque,05/01/2024,Refund,Returned item,12.50,,967.30
+            """.trimIndent() + "\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif")
+
+        val r = invoke("--from", "2024-01-02", "--to", "2024-01-02", "kiwibank", input.toString(), output.toString())
+
+        assertEquals(0, r.code, r.stderr)
+        assertTrue(r.stdout.contains("Wrote 1 transactions"))
+    }
+
+    @Test
+    fun `a successful run replaces an existing output and leaves no temporary behind`(
+        @TempDir tmp: Path,
+    ) {
+        val csv =
+            """
+            Account number,Account name,Date,Other Party,Particulars,Money In,Money Out,Balance
+            ACC,Cheque,02/01/2024,Grocery Store,Weekly shop,,45.20,954.80
+            """.trimIndent() + "\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif").also { it.writeText("!Type:Bank\nSTALE PREVIOUS EXPORT\n") }
+
+        val r = invoke("kiwibank", input.toString(), output.toString())
+
+        assertEquals(0, r.code, r.stderr)
+        val written = Files.readString(output)
+        assertTrue(written.contains("T-45.20"), written)
+        assertTrue(!written.contains("STALE"), "the previous export is fully replaced, not appended to")
+        // The write goes through a sibling temporary; a leaked one would accumulate next to every
+        // statement the user converts.
+        val leftovers = Files.list(tmp).use { paths -> paths.filter { it.fileName.toString().endsWith(".tmp") }.toList() }
+        assertTrue(leftovers.isEmpty(), "no temporary left behind, found $leftovers")
+    }
 }
