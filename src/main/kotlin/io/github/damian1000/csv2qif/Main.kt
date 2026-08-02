@@ -2,8 +2,12 @@ package io.github.damian1000.csv2qif
 
 import java.io.IOException
 import java.io.PrintStream
+import java.io.Writer
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 import kotlin.system.exitProcess
@@ -35,6 +39,14 @@ fun run(
     if (bank == null) {
         err.println("Unknown bank: '${parsed.bankName}'.")
         printUsage(err)
+        return 64
+    }
+
+    // An inverted range selects nothing, and without this the run ends on "No transactions
+    // parsed", which points at the input file for a mistake in the arguments — the wrong place to
+    // start looking when a statement appears to be empty.
+    if (parsed.from != null && parsed.to != null && parsed.from.isAfter(parsed.to)) {
+        err.println("--from ${parsed.from} is after --to ${parsed.to}; that range selects nothing.")
         return 64
     }
 
@@ -72,13 +84,41 @@ fun run(
 
     val output = Paths.get(parsed.outputPath)
     try {
-        Files.newBufferedWriter(output).use { QifWriter(bank.qifType).write(transactions, it) }
+        writeAtomically(output) { QifWriter(bank.qifType).write(transactions, it) }
     } catch (e: IOException) {
         err.println("Cannot write output file ${parsed.outputPath}: ${e.message}")
         return 73
     }
     out.println("Wrote ${transactions.size} transactions to ${parsed.outputPath}")
     return 0
+}
+
+/**
+ * Writes through a sibling temporary file and moves it into place, so [target] is either its
+ * previous contents or the complete new ones — never a half-written file.
+ *
+ * Opening the target directly truncates it before the first byte is written, so a failure partway
+ * through (a full disk, an I/O error, a kill) replaced a good statement with a corrupt one that
+ * still looks like a QIF. A conversion that fails should cost the user nothing.
+ *
+ * The temporary sits beside the target rather than in the system temp directory: the move is only
+ * atomic within a filesystem, and the two are not reliably on the same one.
+ */
+private fun writeAtomically(
+    target: Path,
+    write: (Writer) -> Unit,
+) {
+    val temp = Files.createTempFile(target.toAbsolutePath().parent, target.fileName.toString(), ".tmp")
+    try {
+        Files.newBufferedWriter(temp).use(write)
+        try {
+            Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING)
+        }
+    } finally {
+        Files.deleteIfExists(temp)
+    }
 }
 
 internal data class ParsedArgs(
