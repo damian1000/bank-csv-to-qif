@@ -37,28 +37,36 @@ Each release ships a `SHA256SUMS.txt` next to the archives. Requires JDK 25 on `
 ./build/install/bank-csv-to-qif/bin/bank-csv-to-qif kiwibank statement.csv statement.qif
 ```
 
-Exit codes follow the BSD `sysexits.h` convention: `64` for bad usage, `65` for input data the reader can't parse, `66` for an unreadable input file, `73` for an unwritable output file, `1` if no transactions were parseable (so the output file isn't created), `0` on success.
+Exit codes follow the BSD `sysexits.h` convention: `64` for bad usage, `65` for input data the reader can't parse (including `--strict` refusing a file), `66` for an unreadable input file, `73` for an unwritable output file, `1` if no transactions were parseable (so the output file isn't created), `0` on success.
 
-Two optional flags filter and narrate the run:
+Every run reconciles its input against its output:
+
+```
+Wrote 42 transactions to statement.qif (44 rows read: 42 transactions, 2 header, 0 unrecognised)
+```
+
+That line exists because `Wrote 42 transactions` alone is unfalsifiable — it reads the same whether the statement held 42 rows or 50. A statement's header rows are expected and counted as such. A row the reader declines _after_ the first transaction is different: it sits among the data, so it is probably a transaction that could not be read, and it is echoed to stderr with its line number and the reason.
 
 ```bash
 ./bank-csv-to-qif-1.0.0/bin/bank-csv-to-qif kiwibank statement.csv statement.qif --from 2024-01-01 --to 2024-03-31 -v
 ```
 
-`--from` / `--to` (ISO dates, either or both) keep only transactions in that range; `-v` / `--verbose` prints each parsed transaction to stderr, plus a count of any rows the date range excluded.
+`--from` / `--to` (ISO dates, either or both) keep only transactions in that range; `-v` / `--verbose` prints each parsed transaction to stderr, plus the header rows and a count of any rows the date range excluded; `--strict` refuses to write the file at all when any row among the data went unrecognised, which is the right default for an export you intend to import into an accounts package.
 
 ## Use it as a library
 
 ```kotlin
-val transactions = Files.newBufferedReader(Paths.get("santander-2024-01.csv"))
+val result = Files.newBufferedReader(Paths.get("santander-2024-01.csv"))
     .use { SantanderReader().parse(it) }
 
+check(result.droppedRows.isEmpty()) { "unreadable rows: ${result.droppedRows}" }
+
 Files.newBufferedWriter(Paths.get("santander-2024-01.qif")).use {
-    QifWriter(QifType.CREDIT_CARD).write(transactions, it)
+    QifWriter(QifType.CREDIT_CARD).write(result.transactions, it)
 }
 ```
 
-The intermediate type — `List<Transaction>` — uses `LocalDate` for dates and `BigDecimal` for amounts (signed, positive for inflows). The original ad-hoc scripts these are descended from used `Double` for amounts, which is a real bug for any reasonable definition of "bank statement"; this version doesn't.
+`parse` returns a `ParseResult` rather than a bare list, so a caller can tell "this statement had two header rows" from "this statement had two rows I could not read". `Transaction` uses `LocalDate` for dates and `BigDecimal` for amounts (signed, positive for inflows). The original ad-hoc scripts these are descended from used `Double` for amounts, which is a real bug for any reasonable definition of "bank statement"; this version doesn't.
 
 ## Adding a new bank
 
@@ -66,18 +74,21 @@ Implement `BankCsvReader`:
 
 ```kotlin
 class MyBankReader : BankCsvReader {
-    override fun parse(input: Reader): List<Transaction> {
-        // Use commons-csv to parse; return a Transaction per non-header,
-        // non-balance row. Return null from your row-mapper to skip rows
-        // that aren't real transactions (headers, info lines, etc.).
-    }
+    override fun parse(input: Reader): ParseResult =
+        CSVFormat.DEFAULT.builder().setIgnoreEmptyLines(true).setTrim(true).get()
+            .parse(input)
+            .toParseResult { row -> parseRow(row) }
+
+    private fun parseRow(row: CSVRecord): RowOutcome =
+        // RowOutcome.Parsed(transaction), or RowOutcome.Skipped("why") — never a bare null.
+        // toParseResult sorts the skips into header rows and dropped rows for you.
 }
 ```
 
 The pattern in the existing readers:
 
 - Use `CSVFormat.DEFAULT` from commons-csv for the parse (handles quoted fields with embedded commas correctly).
-- Try to parse a date from the date column; if it fails, skip the row — that's how all three readers reject the header.
+- Try to parse a date from the date column; if it fails, decline the row — that's how all three readers reject the header. Always give a reason: a skip with no reason is how a transaction disappears from a financial export without anyone noticing.
 - Express the amount as a signed `BigDecimal` (positive for inflows, negative for outflows). The QIF writer doesn't add any sign fixups.
 - Strip bank-specific noise from the payee in the reader, not the writer. That keeps `QifWriter` agnostic to where the data came from.
 

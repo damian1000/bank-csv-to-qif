@@ -114,6 +114,76 @@ class MainTest {
     }
 
     @Test
+    fun `reconciliation line accounts for every row read`(
+        @TempDir tmp: Path,
+    ) {
+        val csv =
+            """
+            Account number,Account name,Date,Other Party,Particulars,Money In,Money Out,Balance
+            ACC,Cheque,02/01/2024,Grocery Store,Weekly shop,,45.20,954.80
+            ACC,Cheque,05/01/2024,Refund,Returned item,12.50,,967.30
+            """.trimIndent() + "\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif")
+
+        val r = invoke("kiwibank", input.toString(), output.toString())
+
+        assertEquals(0, r.code)
+        // Without the counts, "Wrote 2 transactions" reads the same whether the file held 2 or 20.
+        assertTrue(
+            r.stdout.contains("3 rows read: 2 transactions, 1 header, 0 unrecognised"),
+            "expected a reconciliation of input to output, got: ${r.stdout}",
+        )
+    }
+
+    @Test
+    fun `an unrecognised row among the data is reported and strict refuses to write`(
+        @TempDir tmp: Path,
+    ) {
+        // The third row's date format differs from the rest — the kind of mid-file change that used
+        // to remove a transaction from the export while the run still reported success.
+        val csv =
+            """
+            Account number,Account name,Date,Other Party,Particulars,Money In,Money Out,Balance
+            ACC,Cheque,02/01/2024,Grocery Store,Weekly shop,,45.20,954.80
+            ACC,Cheque,2024-01-05,Refund,Returned item,12.50,,967.30
+            """.trimIndent() + "\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif")
+
+        val lenient = invoke("kiwibank", input.toString(), output.toString())
+        assertEquals(0, lenient.code, "the default stays permissive")
+        assertTrue(lenient.stderr.contains("Unrecognised row at line 3"), lenient.stderr)
+        assertTrue(lenient.stderr.contains("Refund"), "the offending row is echoed so it can be found")
+        assertTrue(lenient.stdout.contains("1 unrecognised"))
+        assertTrue(Files.exists(output))
+
+        Files.delete(output)
+        val strict = invoke("--strict", "kiwibank", input.toString(), output.toString())
+        assertEquals(65, strict.code)
+        assertTrue(strict.stderr.contains("refusing to write"), strict.stderr)
+        assertTrue(Files.notExists(output), "--strict must not leave a short export behind")
+    }
+
+    @Test
+    fun `strict accepts a file whose only skips are its header`(
+        @TempDir tmp: Path,
+    ) {
+        val csv =
+            """
+            Account number,Account name,Date,Other Party,Particulars,Money In,Money Out,Balance
+            ACC,Cheque,02/01/2024,Grocery Store,Weekly shop,,45.20,954.80
+            """.trimIndent() + "\n"
+        val input = tmp.resolve("in.csv").also { it.writeText(csv) }
+        val output = tmp.resolve("out.qif")
+
+        val r = invoke("--strict", "kiwibank", input.toString(), output.toString())
+
+        assertEquals(0, r.code, "a header row is expected noise, not data loss: ${r.stderr}")
+        assertTrue(Files.exists(output))
+    }
+
+    @Test
     fun `santander happy path produces CCard header`(
         @TempDir tmp: Path,
     ) {

@@ -20,7 +20,8 @@ fun main(args: Array<String>) {
  * Pure-function entry point: returns the exit code rather than calling
  * `exitProcess`, so it can be exercised from tests without killing the JVM.
  * Exit codes follow the BSD `sysexits.h` convention: 64 = usage error,
- * 65 = input data unparseable, 66 = input file missing/unreadable,
+ * 65 = input data unparseable (including `--strict` refusing a file with
+ * unrecognised rows among its data), 66 = input file missing/unreadable,
  * 73 = output file unwritable, 1 = ran successfully but produced no
  * transactions, 0 = success.
  */
@@ -56,7 +57,7 @@ fun run(
         return 66
     }
 
-    val allTransactions =
+    val result =
         try {
             Files.newBufferedReader(input).use { bank.reader().parse(it) }
         } catch (e: Exception) {
@@ -65,6 +66,7 @@ fun run(
             err.println("Failed to parse ${parsed.inputPath}: ${e.message}")
             return 65
         }
+    val allTransactions = result.transactions
     val transactions =
         allTransactions.filter { txn ->
             (parsed.from == null || !txn.date.isBefore(parsed.from)) &&
@@ -72,9 +74,23 @@ fun run(
         }
 
     if (parsed.verbose) {
-        val skipped = allTransactions.size - transactions.size
+        val outOfRange = allTransactions.size - transactions.size
         transactions.forEach { err.println("  parsed: ${it.date} ${it.amount.toPlainString()} | ${it.payee}") }
-        if (skipped > 0) err.println("  ($skipped transaction(s) outside --from/--to range)")
+        if (outOfRange > 0) err.println("  ($outOfRange transaction(s) outside --from/--to range)")
+        result.headerRows.forEach { err.println("  header: line ${it.lineNumber} (${it.reason})") }
+    }
+
+    // Rows the reader declined after the first transaction had already been read sit among the data,
+    // so each one is a row that should probably have been money. Reported whether or not --strict is
+    // set: a conversion that quietly holds fewer transactions than its statement is the failure this
+    // accounting exists to make visible.
+    result.droppedRows.forEach { err.println("Unrecognised row at line ${it.lineNumber} (${it.reason}): ${it.raw}") }
+    if (result.droppedRows.isNotEmpty() && parsed.strict) {
+        err.println(
+            "--strict: refusing to write ${parsed.outputPath} — " +
+                "${result.droppedRows.size} of ${result.rowsRead} rows were not recognised.",
+        )
+        return 65
     }
 
     if (transactions.isEmpty()) {
@@ -89,7 +105,19 @@ fun run(
         err.println("Cannot write output file ${parsed.outputPath}: ${e.message}")
         return 73
     }
-    out.println("Wrote ${transactions.size} transactions to ${parsed.outputPath}")
+    // Every row is accounted for on one line: what went in, what came out, and where the difference
+    // went. Without it "Wrote 42 transactions" is unfalsifiable — it reads the same whether the
+    // statement held 42 or 50.
+    out.println(
+        "Wrote ${transactions.size} transactions to ${parsed.outputPath} " +
+            "(${result.rowsRead} rows read: ${result.transactions.size} transactions, " +
+            "${result.headerRows.size} header, ${result.droppedRows.size} unrecognised" +
+            if (allTransactions.size != transactions.size) {
+                ", ${allTransactions.size - transactions.size} outside --from/--to)"
+            } else {
+                ")"
+            },
+    )
     return 0
 }
 
@@ -128,18 +156,21 @@ internal data class ParsedArgs(
     val from: LocalDate?,
     val to: LocalDate?,
     val verbose: Boolean,
+    val strict: Boolean,
 )
 
 internal fun parseArgs(args: Array<String>): ParsedArgs? {
     var from: LocalDate? = null
     var to: LocalDate? = null
     var verbose = false
+    var strict = false
     val positional = mutableListOf<String>()
 
     var i = 0
     while (i < args.size) {
         when (val arg = args[i]) {
             "-v", "--verbose" -> verbose = true
+            "--strict" -> strict = true
             "--from" -> {
                 if (i + 1 >= args.size) return null
                 from = parseIsoDate(args[i + 1]) ?: return null
@@ -156,7 +187,7 @@ internal fun parseArgs(args: Array<String>): ParsedArgs? {
     }
 
     if (positional.size != 3) return null
-    return ParsedArgs(positional[0], positional[1], positional[2], from, to, verbose)
+    return ParsedArgs(positional[0], positional[1], positional[2], from, to, verbose, strict)
 }
 
 private fun parseIsoDate(s: String): LocalDate? =
@@ -172,5 +203,6 @@ private fun printUsage(err: PrintStream) {
     err.println("  --from YYYY-MM-DD   only include transactions on or after this date")
     err.println("  --to YYYY-MM-DD     only include transactions on or before this date")
     err.println("  -v, --verbose       print each parsed transaction (to stderr)")
+    err.println("  --strict            fail instead of writing when a row among the data is unrecognised")
     err.println("Banks: ${Bank.entries.joinToString(", ") { it.cliName }}")
 }

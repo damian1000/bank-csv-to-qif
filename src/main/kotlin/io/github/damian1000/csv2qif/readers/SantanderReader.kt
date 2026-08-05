@@ -1,7 +1,10 @@
 package io.github.damian1000.csv2qif.readers
 
 import io.github.damian1000.csv2qif.BankCsvReader
+import io.github.damian1000.csv2qif.ParseResult
+import io.github.damian1000.csv2qif.RowOutcome
 import io.github.damian1000.csv2qif.Transaction
+import io.github.damian1000.csv2qif.toParseResult
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVRecord
 import java.io.Reader
@@ -26,27 +29,29 @@ import java.time.format.DateTimeFormatter
 class SantanderReader : BankCsvReader {
     private val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
-    override fun parse(input: Reader): List<Transaction> {
+    override fun parse(input: Reader): ParseResult {
         val format =
             CSVFormat.DEFAULT
                 .builder()
                 .setIgnoreEmptyLines(true)
                 .setTrim(true)
                 .get()
-        return format.parse(input).mapNotNull { row -> parseRow(row) }
+        return format.parse(input).toParseResult { row -> parseRow(row) }
     }
 
-    private fun parseRow(row: CSVRecord): Transaction? {
-        if (row.size() < 8) return null
-        val date = tryParseDate(row.get(COL_DATE)) ?: return null
+    private fun parseRow(row: CSVRecord): RowOutcome {
+        if (row.size() < MIN_COLUMNS) {
+            return RowOutcome.Skipped("only ${row.size()} columns, need at least $MIN_COLUMNS")
+        }
+        val date = tryParseDate(row.get(COL_DATE)) ?: return RowOutcome.Skipped("no dd/MM/yyyy date in column $COL_DATE")
         val rawDescription = row.get(COL_DESCRIPTION)
-        if (rawDescription.contains("INITIAL BALANCE")) return null
+        if (rawDescription.contains("INITIAL BALANCE")) return RowOutcome.Skipped("opening balance, not a transaction")
         val payee = cleanPayee(rawDescription)
         val memo = row.get(COL_CARD)
         val moneyIn = parseAmount(row.get(COL_MONEY_IN))
         val moneyOut = if (row.size() > COL_MONEY_OUT) parseAmount(row.get(COL_MONEY_OUT)) else null
-        val amount = signedAmount(moneyIn, moneyOut) ?: return null
-        return Transaction(date = date, payee = payee, memo = memo, amount = amount)
+        val amount = signedAmount(moneyIn, moneyOut) ?: return RowOutcome.Skipped("no amount in or out")
+        return RowOutcome.Parsed(Transaction(date = date, payee = payee, memo = memo, amount = amount))
     }
 
     private fun tryParseDate(raw: String): LocalDate? =
@@ -91,6 +96,9 @@ class SantanderReader : BankCsvReader {
         private const val COL_DESCRIPTION = 5
         private const val COL_MONEY_IN = 7
         private const val COL_MONEY_OUT = 9
+
+        /** Money out may be absent on an inflow row, so the money-in column is the last required one. */
+        private const val MIN_COLUMNS = COL_MONEY_IN + 1
 
         /**
          * Boilerplate prefixes Santander prepends to the merchant name. Stripped

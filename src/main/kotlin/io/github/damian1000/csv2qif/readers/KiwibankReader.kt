@@ -1,7 +1,10 @@
 package io.github.damian1000.csv2qif.readers
 
 import io.github.damian1000.csv2qif.BankCsvReader
+import io.github.damian1000.csv2qif.ParseResult
+import io.github.damian1000.csv2qif.RowOutcome
 import io.github.damian1000.csv2qif.Transaction
+import io.github.damian1000.csv2qif.toParseResult
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVRecord
 import java.io.Reader
@@ -22,32 +25,35 @@ import java.time.format.DateTimeFormatter
  * Other Party and Particulars are distinct fields in a Kiwibank export, so they
  * map to distinct QIF fields rather than duplicating one value into both.
  *
- * Lines that don't have a parseable date in column 2 are skipped silently:
- * Kiwibank exports include a few header rows before the transactions, and this
- * is the simplest robust way to skip them.
+ * Lines without a parseable date in column 2 are not transactions: Kiwibank
+ * exports open with a few header rows, and this is the simplest robust way to
+ * skip them. They are recorded with a reason rather than dropped silently, so a
+ * run can reconcile the rows it read against the transactions it wrote.
  */
 class KiwibankReader : BankCsvReader {
     private val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
-    override fun parse(input: Reader): List<Transaction> {
+    override fun parse(input: Reader): ParseResult {
         val format =
             CSVFormat.DEFAULT
                 .builder()
                 .setIgnoreEmptyLines(true)
                 .setTrim(true)
                 .get()
-        return format.parse(input).mapNotNull { row -> parseRow(row) }
+        return format.parse(input).toParseResult { row -> parseRow(row) }
     }
 
-    private fun parseRow(row: CSVRecord): Transaction? {
-        if (row.size() <= COL_MONEY_IN) return null
-        val date = tryParseDate(row.get(COL_DATE)) ?: return null
+    private fun parseRow(row: CSVRecord): RowOutcome {
+        if (row.size() <= COL_MONEY_IN) {
+            return RowOutcome.Skipped("only ${row.size()} columns, need at least ${COL_MONEY_IN + 1}")
+        }
+        val date = tryParseDate(row.get(COL_DATE)) ?: return RowOutcome.Skipped("no dd/MM/yyyy date in column $COL_DATE")
         val payee = row.get(COL_OTHER_PARTY)
         val memo = row.get(COL_PARTICULARS)
         val moneyIn = parseAmount(row.get(COL_MONEY_IN))
         val moneyOut = if (row.size() > COL_MONEY_OUT) parseAmount(row.get(COL_MONEY_OUT)) else null
-        val amount = signedAmount(moneyIn, moneyOut) ?: return null
-        return Transaction(date = date, payee = payee, memo = memo, amount = amount)
+        val amount = signedAmount(moneyIn, moneyOut) ?: return RowOutcome.Skipped("no amount in or out")
+        return RowOutcome.Parsed(Transaction(date = date, payee = payee, memo = memo, amount = amount))
     }
 
     private fun tryParseDate(raw: String): LocalDate? =

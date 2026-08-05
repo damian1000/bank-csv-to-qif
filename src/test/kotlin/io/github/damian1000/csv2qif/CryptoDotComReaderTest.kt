@@ -35,14 +35,14 @@ class CryptoDotComReaderTest {
     fun `truncated rows are skipped silently`() {
         val csv = "2024-01-02,short,row\n"
         val parsed = StringReader(csv).use { CryptoDotComReader().parse(it) }
-        assertTrue(parsed.isEmpty(), "rows with fewer than 8 columns must not produce transactions")
+        assertTrue(parsed.transactions.isEmpty(), "rows with fewer than 8 columns must not produce transactions")
     }
 
     @Test
     fun `row with unparseable date is skipped`() {
         val csv = "not-a-date,Some Desc,Sec,3,4,5,6,1.00\n"
         val parsed = StringReader(csv).use { CryptoDotComReader().parse(it) }
-        assertTrue(parsed.isEmpty())
+        assertTrue(parsed.transactions.isEmpty())
     }
 
     @Test
@@ -55,6 +55,6 @@ class CryptoDotComReaderTest {
 
     private fun readFixture(name: String): List<Transaction> {
         val stream = checkNotNull(javaClass.classLoader.getResourceAsStream(name)) { "missing $name" }
-        return InputStreamReader(stream).use { CryptoDotComReader().parse(it) }
+        return InputStreamReader(stream).use { CryptoDotComReader().parse(it) }.transactions
     }
 }
