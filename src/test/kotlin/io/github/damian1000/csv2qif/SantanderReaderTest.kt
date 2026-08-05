@@ -35,6 +35,6 @@ class SantanderReaderTest {
 
     private fun readFixture(name: String): List<Transaction> {
         val stream = checkNotNull(javaClass.classLoader.getResourceAsStream(name)) { "missing $name" }
-        return InputStreamReader(stream).use { SantanderReader().parse(it) }
+        return InputStreamReader(stream).use { SantanderReader().parse(it) }.transactions
     }
 }

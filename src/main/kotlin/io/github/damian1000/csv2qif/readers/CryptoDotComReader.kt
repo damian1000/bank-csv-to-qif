@@ -1,7 +1,10 @@
 package io.github.damian1000.csv2qif.readers
 
 import io.github.damian1000.csv2qif.BankCsvReader
+import io.github.damian1000.csv2qif.ParseResult
+import io.github.damian1000.csv2qif.RowOutcome
 import io.github.damian1000.csv2qif.Transaction
+import io.github.damian1000.csv2qif.toParseResult
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVRecord
 import java.io.Reader
@@ -24,27 +27,31 @@ import java.time.format.DateTimeFormatter
 class CryptoDotComReader : BankCsvReader {
     private val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-    override fun parse(input: Reader): List<Transaction> {
+    override fun parse(input: Reader): ParseResult {
         val format =
             CSVFormat.DEFAULT
                 .builder()
                 .setIgnoreEmptyLines(true)
                 .setTrim(true)
                 .get()
-        return format.parse(input).mapNotNull { row -> parseRow(row) }
+        return format.parse(input).toParseResult { row -> parseRow(row) }
     }
 
-    private fun parseRow(row: CSVRecord): Transaction? {
-        if (row.size() < 8) return null
+    private fun parseRow(row: CSVRecord): RowOutcome {
+        if (row.size() < MIN_COLUMNS) {
+            return RowOutcome.Skipped("only ${row.size()} columns, need at least $MIN_COLUMNS")
+        }
         val description = row.get(COL_DESCRIPTION_PRIMARY)
-        if (description.contains("Transaction Description")) return null
+        if (description.contains("Transaction Description")) return RowOutcome.Skipped("column header row")
         val secondary = row.get(COL_DESCRIPTION_SECONDARY)
         val payee = if (secondary.isBlank()) description else "$description ($secondary)"
-        val date = tryParseDate(row.get(COL_DATE).take(10)) ?: return null
+        val date = tryParseDate(row.get(COL_DATE).take(10)) ?: return RowOutcome.Skipped("no yyyy-MM-dd date in column $COL_DATE")
+        // A dated row with no amount is a transaction whose value could not be read, not noise —
+        // it fails the run rather than being counted as a skip, because guessing zero moves money.
         val amount =
             parseAmount(row.get(COL_AMOUNT))
                 ?: throw IllegalArgumentException("Missing amount in row $payee")
-        return Transaction(date = date, payee = payee, memo = payee, amount = amount)
+        return RowOutcome.Parsed(Transaction(date = date, payee = payee, memo = payee, amount = amount))
     }
 
     private fun tryParseDate(raw: String): LocalDate? =
@@ -70,5 +77,6 @@ class CryptoDotComReader : BankCsvReader {
         private const val COL_DESCRIPTION_PRIMARY = 1
         private const val COL_DESCRIPTION_SECONDARY = 2
         private const val COL_AMOUNT = 7
+        private const val MIN_COLUMNS = COL_AMOUNT + 1
     }
 }
